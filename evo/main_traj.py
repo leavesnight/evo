@@ -91,6 +91,15 @@ def parser() -> argparse.ArgumentParser:
     output_opts.add_argument("-p", "--plot", help="show plot window",
                              action="store_true")
     output_opts.add_argument(
+        "-tdxc",
+        "--thresh_delta_x_conti", type=float,
+        help="the max continuous delta_t (s) shown in ape plot",
+        default=2)
+    output_opts.add_argument(
+        "--no_rpy", type=int,
+        help="the max continuous delta_t (s) shown in ape plot",
+        default=0)
+    output_opts.add_argument(
         "--plot_relative_time", action="store_true",
         help="show timestamps relative to the start of the reference")
     output_opts.add_argument(
@@ -424,8 +433,9 @@ def run(args):
         plot_collection = plot.PlotCollection("evo_traj - trajectory plot")
         fig_xyz, axarr_xyz = plt.subplots(3, sharex="col", figsize=tuple(
             SETTINGS.plot_figsize))
-        fig_rpy, axarr_rpy = plt.subplots(3, sharex="col", figsize=tuple(
-            SETTINGS.plot_figsize))
+        if (not args.no_rpy):
+            fig_rpy, axarr_rpy = plt.subplots(3, sharex="col", figsize=tuple(
+                SETTINGS.plot_figsize))
         fig_traj = plt.figure(figsize=tuple(SETTINGS.plot_figsize))
 
         plot_mode = plot.PlotMode[args.plot_mode]
@@ -441,6 +451,7 @@ def run(args):
 
             short_traj_name = to_compact_name(
                 args.ref, args, SETTINGS.plot_usetex)
+            
             plot.traj(ax_traj, plot_mode, ref_traj,
                       style=SETTINGS.plot_reference_linestyle,
                       color=SETTINGS.plot_reference_color,
@@ -453,11 +464,12 @@ def run(args):
                 color=SETTINGS.plot_reference_color, label=short_traj_name,
                 alpha=SETTINGS.plot_reference_alpha,
                 start_timestamp=start_time)
-            plot.traj_rpy(
-                axarr_rpy, ref_traj, style=SETTINGS.plot_reference_linestyle,
-                color=SETTINGS.plot_reference_color, label=short_traj_name,
-                alpha=SETTINGS.plot_reference_alpha,
-                start_timestamp=start_time)
+            if (not args.no_rpy):
+                plot.traj_rpy(
+                    axarr_rpy, ref_traj, style=SETTINGS.plot_reference_linestyle,
+                    color=SETTINGS.plot_reference_color, label=short_traj_name,
+                    alpha=SETTINGS.plot_reference_alpha,
+                    start_timestamp=start_time)
         elif args.plot_relative_time:
             # Use lower bound timestamp as the 0 time if there's no reference.
             if len(trajectories) > 1:
@@ -472,6 +484,7 @@ def run(args):
             cmap = getattr(cm, SETTINGS.plot_multi_cmap)
             cmap_colors = iter(cmap(np.linspace(0, 1, len(trajectories))))
 
+        pos_legend = 0
         for name, traj in trajectories.items():
             if cmap_colors is None:
                 color = next(ax_traj._get_lines.prop_cycler)['color']
@@ -479,7 +492,40 @@ def run(args):
                 color = next(cmap_colors)
 
             short_traj_name = to_compact_name(name, args, SETTINGS.plot_usetex)
-            plot.traj(ax_traj, plot_mode, traj,
+            if (len(traj.timestamps) and 0 < args.thresh_delta_x_conti):
+                last_ttmp = traj.timestamps[0]
+                trajs_xyz = []
+                trajs_rpy = []
+                timestamps = []
+                trajs = []
+                for id_traj in range(1,len(traj.timestamps)):
+                    ttmp = traj.timestamps[id_traj]
+                    if abs(ttmp - last_ttmp) >= args.thresh_delta_x_conti:
+                        trajs.append(PoseTrajectory3D(trajs_xyz,trajs_rpy,timestamps))
+                        trajs_xyz=[]
+                        trajs_rpy=[]
+                        timestamps = []
+                    trajs_xyz.append(traj.positions_xyz[id_traj])
+                    trajs_rpy.append(traj.orientations_quat_wxyz[id_traj])
+                    timestamps.append(traj.timestamps[id_traj])
+                    last_ttmp = ttmp
+                if (trajs_xyz != []):
+                    trajs.append(PoseTrajectory3D(trajs_xyz,trajs_rpy,timestamps))  
+                    trajs_xyz=[]
+                    trajs_rpy=[]
+                    timestamps = []
+                id_add = 0#0#-1
+                trajs_xyz.append(traj.positions_xyz[id_add])
+                trajs_rpy.append(traj.orientations_quat_wxyz[id_add])
+                timestamps.append(traj.timestamps[id_add] + (traj.timestamps[id_add] - traj.timestamps[-1-id_add]) * 0.32)#0.25#0.1
+#                trajs.append(PoseTrajectory3D(trajs_xyz,trajs_rpy,timestamps))  
+                trajs.insert(0,PoseTrajectory3D(trajs_xyz,trajs_rpy,timestamps))
+                plot.trajs(ax_traj, plot_mode, trajs,
+                      SETTINGS.plot_trajectory_linestyle, color,
+                      short_traj_name, alpha=SETTINGS.plot_trajectory_alpha)
+                print("segments_num={}".format(len(trajs)))
+            else:
+                plot.traj(ax_traj, plot_mode, traj,
                       SETTINGS.plot_trajectory_linestyle, color,
                       short_traj_name, alpha=SETTINGS.plot_trajectory_alpha)
             plot.draw_coordinate_axes(ax_traj, traj, plot_mode,
@@ -489,15 +535,28 @@ def run(args):
                     ax_traj, traj, synced_refs[name], plot_mode, color=color,
                     style=SETTINGS.plot_pose_correspondences_linestyle,
                     alpha=SETTINGS.plot_trajectory_alpha)
-            plot.traj_xyz(axarr_xyz, traj, SETTINGS.plot_trajectory_linestyle,
+            if (len(traj.timestamps) and 0 < args.thresh_delta_x_conti):
+                plot.trajs_xyz(axarr_xyz, trajs, SETTINGS.plot_trajectory_linestyle,
                           color, short_traj_name,
                           alpha=SETTINGS.plot_trajectory_alpha,
                           start_timestamp=start_time)
-            plot.traj_rpy(axarr_rpy, traj, SETTINGS.plot_trajectory_linestyle,
+                if (not args.no_rpy):
+                    plot.trajs_rpy(axarr_rpy, trajs, SETTINGS.plot_trajectory_linestyle,
                           color, short_traj_name,
                           alpha=SETTINGS.plot_trajectory_alpha,
                           start_timestamp=start_time)
-            if not SETTINGS.plot_usetex:
+                pos_legend += 1
+            else:
+                plot.traj_xyz(axarr_xyz, traj, SETTINGS.plot_trajectory_linestyle,
+                          color, short_traj_name,
+                          alpha=SETTINGS.plot_trajectory_alpha,
+                          start_timestamp=start_time)
+                if (not args.no_rpy):
+                    plot.traj_rpy(axarr_rpy, traj, SETTINGS.plot_trajectory_linestyle,
+                          color, short_traj_name,
+                          alpha=SETTINGS.plot_trajectory_alpha,
+                          start_timestamp=start_time)
+            if not SETTINGS.plot_usetex and not args.no_rpy:
                 fig_rpy.text(0., 0.005, "euler_angle_sequence: {}".format(
                     SETTINGS.euler_angle_sequence), fontsize=6)
 
@@ -506,7 +565,8 @@ def run(args):
 
         plot_collection.add_figure("trajectories", fig_traj)
         plot_collection.add_figure("xyz_view", fig_xyz)
-        plot_collection.add_figure("rpy_view", fig_rpy)
+        if (not args.no_rpy):
+            plot_collection.add_figure("rpy_view", fig_rpy)
         if args.plot:
             plot_collection.show()
         if args.save_plot:

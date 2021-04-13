@@ -134,9 +134,27 @@ def plot_result(args: argparse.Namespace, result: Result, traj_ref: PosePath3D,
         x_array = None
         x_label = "index"
 
+    if len(x_array) and 0 < args.thresh_delta_x_conti:
+        last_xtmp = x_array[0]
+        x_arrays = [[last_xtmp]]
+        y_array = result.np_arrays["error_array"]
+        y_arrays = [[y_array[0]]]
+        for id_xtmp in range(1, len(x_array)):
+            xtmp = x_array[id_xtmp]
+            if abs(xtmp - last_xtmp) >= args.thresh_delta_x_conti:
+                x_arrays.append([])
+                y_arrays.append([])
+            x_arrays[-1].append(xtmp)
+            y_arrays[-1].append(y_array[id_xtmp])
+            last_xtmp = xtmp
+        print("segments_num = {}".format(len(x_arrays)))
+    else:
+        x_arrays = x_array
+        y_arrays = result.np_arrays["error_array"]
+    
     plot.error_array(
-        fig1.gca(), result.np_arrays["error_array"], x_array=x_array,
-        statistics={
+        fig1.gca(), y_arrays,
+        x_array=x_arrays, statistics={
             s: result.stats[s]
             for s in SETTINGS.plot_statistics if s not in ("min", "max")
         }, name=result.info["label"], title=result.info["title"],

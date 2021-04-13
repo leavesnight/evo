@@ -315,6 +315,26 @@ def plot_mode_to_idx(
     z_idx = 2 if plot_mode == PlotMode.xyz else None
     return x_idx, y_idx, z_idx
 
+def trajs(ax: plt.Axes, plot_mode: PlotMode, trajs: list, style: str = '-',
+         color: str = 'black', label: str = "", alpha: float = 1.0) -> None:
+    if (len(trajs) and isinstance(trajs, list)):
+        x_idx, y_idx, z_idx = plot_mode_to_idx(plot_mode)
+        id_traj = 0
+        for traj in trajs:
+            x = traj.positions_xyz[:, x_idx]
+            y = traj.positions_xyz[:, y_idx]
+            if (id_traj):
+                label = ""
+            if plot_mode == PlotMode.xyz:
+                z = traj.positions_xyz[:, z_idx]
+                ax.plot(x, y, z, style, color=color, label=label, alpha=alpha)
+                if SETTINGS.plot_xyz_realistic:
+                    set_aspect_equal_3d(ax)
+            else:
+                ax.plot(x, y, style, color=color, label=label, alpha=alpha)
+            if label:
+                ax.legend(frameon=True)
+            id_traj+=1
 
 def traj(ax: plt.Axes, plot_mode: PlotMode, traj: trajectory.PosePath3D,
          style: str = '-', color: str = 'black', label: str = "",
@@ -484,6 +504,37 @@ def draw_correspondence_edges(ax: plt.Axes, traj_1: trajectory.PosePath3D,
     ax.add_collection(markers)
 
 
+def trajs_xyz(axarr: np.ndarray, trajs: list, style: str = '-',
+             color: str = 'black', label: str = "", alpha: float = 1.0,
+             start_timestamp: typing.Optional[float] = None) -> None:
+    if (len(trajs) and isinstance(trajs, list)):
+        id_traj = 0
+        for traj in trajs:
+            if len(axarr) != 3:
+                raise PlotException("expected an axis array with 3 subplots - got " +
+                                str(len(axarr)))
+            if isinstance(traj, trajectory.PoseTrajectory3D):
+                if start_timestamp:
+                    x = traj.timestamps - start_timestamp
+                else:
+                    x = traj.timestamps
+                xlabel = "$t$ (s)"
+            else:
+                x = range(0, len(traj.positions_xyz))
+                xlabel = "index"
+            ylabels = ["$x$ (m)", "$y$ (m)", "$z$ (m)"]
+            if (id_traj):
+                label = ""
+            for i in range(0, 3):
+                axarr[i].plot(x, traj.positions_xyz[:, i], style, color=color,
+                              label=label, alpha=alpha)
+                axarr[i].set_ylabel(ylabels[i])
+            axarr[2].set_xlabel(xlabel)
+            if label:
+                #axarr[0].legend(frameon=True)
+                axarr[0].legend(frameon=False)
+            id_traj+=1
+               
 def traj_xyz(axarr: np.ndarray, traj: trajectory.PosePath3D, style: str = '-',
              color: str = 'black', label: str = "", alpha: float = 1.0,
              start_timestamp: typing.Optional[float] = None) -> None:
@@ -501,7 +552,7 @@ def traj_xyz(axarr: np.ndarray, traj: trajectory.PosePath3D, style: str = '-',
     """
     if len(axarr) != 3:
         raise PlotException("expected an axis array with 3 subplots - got " +
-                            str(len(axarr)))
+                        str(len(axarr)))
     if isinstance(traj, trajectory.PoseTrajectory3D):
         if start_timestamp:
             x = traj.timestamps - start_timestamp
@@ -520,6 +571,36 @@ def traj_xyz(axarr: np.ndarray, traj: trajectory.PosePath3D, style: str = '-',
     if label:
         axarr[0].legend(frameon=True)
 
+def trajs_rpy(axarr: np.ndarray, trajs: list, style: str = '-',
+             color: str = 'black', label: str = "", alpha: float = 1.0,
+             start_timestamp: typing.Optional[float] = None) -> None:
+    if (len(trajs) and isinstance(trajs, list)):
+        id_traj = 0
+        for traj in trajs:
+            if len(axarr) != 3:
+                raise PlotException("expected an axis array with 3 subplots - got " +
+                                    str(len(axarr)))
+            angles = traj.get_orientations_euler(SETTINGS.euler_angle_sequence)
+            if isinstance(traj, trajectory.PoseTrajectory3D):
+                if start_timestamp:
+                    x = traj.timestamps - start_timestamp
+                else:
+                    x = traj.timestamps
+                xlabel = "$t$ (s)"
+            else:
+                x = range(0, len(angles))
+                xlabel = "index"
+            ylabels = ["$roll$ (deg)", "$pitch$ (deg)", "$yaw$ (deg)"]
+            if (id_traj):
+                label = ""
+            for i in range(0, 3):
+                axarr[i].plot(x, np.rad2deg(angles[:, i]), style, color=color,
+                              label=label, alpha=alpha)
+                axarr[i].set_ylabel(ylabels[i])
+            axarr[2].set_xlabel(xlabel)
+            if label:
+                axarr[0].legend(frameon=True)
+            id_traj+=1
 
 def traj_rpy(axarr: np.ndarray, traj: trajectory.PosePath3D, style: str = '-',
              color: str = 'black', label: str = "", alpha: float = 1.0,
@@ -557,7 +638,6 @@ def traj_rpy(axarr: np.ndarray, traj: trajectory.PosePath3D, style: str = '-',
     axarr[2].set_xlabel(xlabel)
     if label:
         axarr[0].legend(frameon=True)
-
 
 def trajectories(fig: plt.Figure, trajectories: typing.Union[
         trajectory.PosePath3D, typing.Sequence[trajectory.PosePath3D],
@@ -632,7 +712,16 @@ def error_array(ax: plt.Axes, err_array: ListOrArray,
                     color=color, label=name)
     else:
         if x_array is not None:
-            ax.plot(x_array, err_array, linestyle=linestyle, marker=marker,
+            if len(x_array) and isinstance(x_array[0], list):
+                for id_x in range(len(x_array)):
+                    if id_x:
+                        label=""
+                    else:
+                        label=name
+                    ax.plot(x_array[id_x], err_array[id_x], linestyle=linestyle,
+                        marker=marker, color=color, label=label)
+            else:
+                ax.plot(x_array, err_array, linestyle=linestyle, marker=marker,
                     color=color, label=name)
         else:
             ax.plot(err_array, linestyle=linestyle, marker=marker, color=color,
