@@ -72,6 +72,11 @@ def parser() -> argparse.ArgumentParser:
         help="show plot window",
     )
     output_opts.add_argument(
+        "-tdxc",
+        "--thresh_delta_x_conti", type=float,
+        help="the max continuous delta_t (s) shown in ape plot",
+        default=2)
+    output_opts.add_argument(
         "--plot_mode", default=SETTINGS.plot_mode_default,
         help="the axes for plot projection",
         choices=["xy", "xz", "yx", "yz", "zx", "zy", "xyz"])
@@ -167,7 +172,7 @@ def ape(traj_ref: PosePath3D, traj_est: PosePath3D,
         pose_relation: metrics.PoseRelation, align: bool = False,
         correct_scale: bool = False, n_to_align: int = -1,
         align_origin: bool = False, ref_name: str = "reference",
-        est_name: str = "estimate") -> Result:
+        est_name: str = "estimate", init_time = None) -> Result:
 
     # Align the trajectories.
     only_scale = correct_scale and not align
@@ -209,8 +214,10 @@ def ape(traj_ref: PosePath3D, traj_est: PosePath3D,
     ape_result.add_trajectory(ref_name, traj_ref)
     ape_result.add_trajectory(est_name, traj_est)
     if isinstance(traj_est, PoseTrajectory3D):
+        if (init_time is None):
+            init_time = traj_est.timestamps[0]
         seconds_from_start = np.array(
-            [t - traj_est.timestamps[0] for t in traj_est.timestamps])
+            [t - init_time for t in traj_est.timestamps])
         ape_result.add_np_array("seconds_from_start", seconds_from_start)
         ape_result.add_np_array("timestamps", traj_est.timestamps)
 
@@ -233,6 +240,7 @@ def run(args: argparse.Namespace) -> None:
     traj_ref, traj_est, ref_name, est_name = common.load_trajectories(args)
 
     traj_ref_full = None
+    traj_est_full = None
     if args.plot_full_ref:
         import copy
         traj_ref_full = copy.deepcopy(traj_ref)
@@ -256,8 +264,9 @@ def run(args: argparse.Namespace) -> None:
         align_origin=args.align_origin,
         ref_name=ref_name,
         est_name=est_name,
+        init_time = traj_ref_full.timestamps[0] - args.t_offset
     )
-
+    
     if args.plot or args.save_plot or args.serialize_plot:
         common.plot_result(args, result, traj_ref,
                            result.trajectories[est_name],
