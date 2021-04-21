@@ -241,9 +241,11 @@ def run(args: argparse.Namespace) -> None:
 
     traj_ref_full = None
     traj_est_full = None
+    init_time = None
     if args.plot_full_ref:
         import copy
         traj_ref_full = copy.deepcopy(traj_ref)
+        init_time = traj_ref_full.timestamps[0] - args.t_offset
 
     if isinstance(traj_ref, PoseTrajectory3D) and isinstance(
             traj_est, PoseTrajectory3D):
@@ -264,7 +266,7 @@ def run(args: argparse.Namespace) -> None:
         align_origin=args.align_origin,
         ref_name=ref_name,
         est_name=est_name,
-        init_time = traj_ref_full.timestamps[0] - args.t_offset
+        init_time=init_time
     )
     
     if args.plot or args.save_plot or args.serialize_plot:
