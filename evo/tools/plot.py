@@ -489,7 +489,7 @@ def draw_correspondence_edges(ax: plt.Axes, traj_1: trajectory.PosePath3D,
 
 def trajs_xyz(axarr: np.ndarray, trajs: list, style: str = '-',
              color: str = 'black', label: str = "", alpha: float = 1.0,
-             start_timestamp: typing.Optional[float] = None) -> None:
+             start_timestamp: typing.Optional[float] = None, id: int = 0) -> None:
     if (len(trajs) and isinstance(trajs, list)):
         id_traj = 0
         for traj in trajs:
@@ -506,21 +506,39 @@ def trajs_xyz(axarr: np.ndarray, trajs: list, style: str = '-',
                 x = range(0, len(traj.positions_xyz))
                 xlabel = "index"
             ylabels = ["$x$ (m)", "$y$ (m)", "$z$ (m)"]
-            if (id_traj):
+            if 0 < id_traj:
                 label = ""
+            fontsize_plt = 18
             for i in range(0, 3):
+                if 0 >= id or id - 1 == i:
+                    labeltmp = label
+                else:
+                    labeltmp = ""
+                if labeltmp != "":
+                    print(labeltmp)
                 axarr[i].plot(x, traj.positions_xyz[:, i], style, color=color,
-                              label=label, alpha=alpha)
-                axarr[i].set_ylabel(ylabels[i])
-            axarr[2].set_xlabel(xlabel)
-            if label:
+                              label=labeltmp, alpha=alpha)
+                if 0 < fontsize_plt:
+                    for labelsize in axarr[i].xaxis.get_ticklabels():
+                        labelsize.set_fontsize(fontsize_plt)
+                    for labelsize in axarr[i].yaxis.get_ticklabels():
+                        labelsize.set_fontsize(fontsize_plt)
+                    axarr[i].set_ylabel(ylabels[i], fontsize=fontsize_plt)
+                    axarr[i].legend(fontsize=fontsize_plt, loc='upper left', frameon=False)  # , bbox_to_anchor=(1, 0))
+                else:
+                    axarr[i].set_ylabel(ylabels[i])
+            if 0 < fontsize_plt:
+                axarr[2].set_xlabel(xlabel, fontsize=fontsize_plt)
+            else:
+                axarr[2].set_xlabel(xlabel)
+            if 0 < id and 0 >= fontsize_plt:
                 #axarr[0].legend(frameon=True)
                 axarr[0].legend(frameon=False)
-            id_traj+=1
-               
+            id_traj += 1
+
 def traj_xyz(axarr: np.ndarray, traj: trajectory.PosePath3D, style: str = '-',
              color: str = 'black', label: str = "", alpha: float = 1.0,
-             start_timestamp: typing.Optional[float] = None) -> None:
+             start_timestamp: typing.Optional[float] = None, id: int = 0) -> None:
     """
     plot a path/trajectory based on xyz coordinates into an axis
     :param axarr: an axis array (for x, y & z)
@@ -547,12 +565,14 @@ def traj_xyz(axarr: np.ndarray, traj: trajectory.PosePath3D, style: str = '-',
         xlabel = "index"
     ylabels = ["$x$ (m)", "$y$ (m)", "$z$ (m)"]
     for i in range(0, 3):
+        if 0 >= id or id - 1 == i:
+            labeltmp = label
+        else:
+            labeltmp = ""
         axarr[i].plot(x, traj.positions_xyz[:, i], style, color=color,
-                      label=label, alpha=alpha)
+                      label=labeltmp, alpha=alpha)
         axarr[i].set_ylabel(ylabels[i])
     axarr[2].set_xlabel(xlabel)
-    if label:
-        axarr[0].legend(frameon=True)
 
 def trajs_rpy(axarr: np.ndarray, trajs: list, style: str = '-',
              color: str = 'black', label: str = "", alpha: float = 1.0,
