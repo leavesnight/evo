@@ -463,7 +463,7 @@ def run(args):
                 axarr_xyz, ref_traj, style=SETTINGS.plot_reference_linestyle,
                 color=SETTINGS.plot_reference_color, label=short_traj_name,
                 alpha=SETTINGS.plot_reference_alpha,
-                start_timestamp=start_time)
+                start_timestamp=start_time, id=1)
             if (not args.no_rpy):
                 plot.traj_rpy(
                     axarr_rpy, ref_traj, style=SETTINGS.plot_reference_linestyle,
@@ -485,6 +485,7 @@ def run(args):
             cmap_colors = iter(cmap(np.linspace(0, 1, len(trajectories))))
 
         pos_legend = 0
+        id = 0
         for name, traj in trajectories.items():
             if cmap_colors is None:
                 color = next(ax_traj._get_lines.prop_cycler)['color']
@@ -517,8 +518,8 @@ def run(args):
                 id_add = 0#0#-1
                 trajs_xyz.append(traj.positions_xyz[id_add])
                 trajs_rpy.append(traj.orientations_quat_wxyz[id_add])
-                timestamps.append(traj.timestamps[id_add] + (traj.timestamps[id_add] - traj.timestamps[-1-id_add]) * 0.32)#0.25#0.1
-#                trajs.append(PoseTrajectory3D(trajs_xyz,trajs_rpy,timestamps))  
+                timestamps.append(traj.timestamps[id_add] + (traj.timestamps[id_add] - traj.timestamps[-1-id_add]) * 0.32)#0.32#0.25#0.1
+#                trajs.append(PoseTrajectory3D(trajs_xyz,trajs_rpy,timestamps))
                 trajs.insert(0,PoseTrajectory3D(trajs_xyz,trajs_rpy,timestamps))
                 plot.trajs(ax_traj, plot_mode, trajs,
                       SETTINGS.plot_trajectory_linestyle, color,
@@ -536,10 +537,11 @@ def run(args):
                     style=SETTINGS.plot_pose_correspondences_linestyle,
                     alpha=SETTINGS.plot_trajectory_alpha)
             if (len(traj.timestamps) and 0 < args.thresh_delta_x_conti):
+                id = 1 + pos_legend // 2
                 plot.trajs_xyz(axarr_xyz, trajs, SETTINGS.plot_trajectory_linestyle,
                           color, short_traj_name,
                           alpha=SETTINGS.plot_trajectory_alpha,
-                          start_timestamp=start_time)
+                          start_timestamp=start_time, id=id)
                 if (not args.no_rpy):
                     plot.trajs_rpy(axarr_rpy, trajs, SETTINGS.plot_trajectory_linestyle,
                           color, short_traj_name,
