@@ -85,6 +85,11 @@ def parser() -> argparse.ArgumentParser:
         help="show plot window",
     )
     output_opts.add_argument(
+        "-tdxc",
+        "--thresh_delta_x_conti", type=float,
+        help="the max continuous delta_t (s) shown in rpe plot",
+        default=0)
+    output_opts.add_argument(
         "--plot_mode", default=SETTINGS.plot_mode_default,
         help="the axes for plot projection",
         choices=["xy", "xz", "yx", "yz", "zx", "zy", "xyz"])
