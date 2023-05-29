@@ -101,9 +101,9 @@ def read_tum_trajectory_file(file_path) -> PoseTrajectory3D:
     :return: trajectory.PoseTrajectory3D object
     """
     raw_mat = csv_read_matrix(file_path, delim=" ", comment_str="#")
-    error_msg = ("TUM trajectory files must have 8 entries per row "
+    error_msg = ("TUM trajectory files must have >=8 entries per row "
                  "and no trailing delimiter at the end of the rows (space)")
-    if not raw_mat or (len(raw_mat) > 0 and len(raw_mat[0]) != 8):
+    if not raw_mat or (len(raw_mat) > 0 and len(raw_mat[0]) < 8):
         raise FileInterfaceException(error_msg)
     try:
         mat = np.array(raw_mat).astype(float)
@@ -111,7 +111,7 @@ def read_tum_trajectory_file(file_path) -> PoseTrajectory3D:
         raise FileInterfaceException(error_msg)
     stamps = mat[:, 0]  # n x 1
     xyz = mat[:, 1:4]  # n x 3
-    quat = mat[:, 4:]  # n x 4
+    quat = mat[:, 4:8]  # n x 4
     quat = np.roll(quat, 1, axis=1)  # shift 1 column -> w in front column
     if not hasattr(file_path, 'read'):  # if not file handle
         logger.debug("Loaded {} stamps and poses from: {}".format(
