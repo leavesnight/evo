@@ -329,7 +329,7 @@ def trajs(ax: plt.Axes, plot_mode: PlotMode, trajs: list, style: str = '-',
                 z = traj.positions_xyz[:, z_idx]
                 ax.plot(x, y, z, style, color=color, label=label, alpha=alpha)
                 if SETTINGS.plot_xyz_realistic:
-                    set_aspect_equal_3d(ax)
+                    set_aspect_equal(ax)
             else:
                 ax.plot(x, y, style, color=color, label=label, alpha=alpha)
             if label:
